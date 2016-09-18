@@ -83,8 +83,8 @@
 #include "xenvmc_frontend.h"
 
 #define DEBUG_EVT				1
-#define DEBUG_SENDTO			0
-#define DEBUG_RECVFROM			0
+#define DEBUG_SENDTO			1
+#define DEBUG_RECVFROM			1
 #define DEBUG_CLOSE				0
 #define DEBUG_MSG				0
 #define DEBUG_MSG_CREATE		0
@@ -1726,8 +1726,10 @@ asmlinkage long new_sys_sendto(int fd, void __user *buff, size_t len, unsigned i
 	int err, fput_needed;
 
 	sk = sockfd_lookup_light(fd, &err, &fput_needed);
-	if (!sk)
+	if (!sk){
+	    EPRINTK("sockfd_lookup_light failed!");
 		goto send_traditionally;
+	}
 	get_sock_info(sk, &type, &ip_addr, &peer_port, &my_port);
 	if (type != SOCK_STREAM && type != SOCK_DGRAM)
 	{
@@ -2023,8 +2025,10 @@ asmlinkage long new_sys_recvfrom(int fd, void __user *buff, size_t len, unsigned
 	uint16_t type = 0;
 
 	sock = sockfd_lookup_light(fd, &err, &fput_needed);
-	if (!sock)
+	if (!sock){
+	    EPRINTK("sockfd_lookup_light failed!");
 		goto recv_traditionally;
+	}
 	get_sock_info(sock, &type, &ip_addr, &peer_port, &my_port);
 	if (type != SOCK_STREAM)
 		goto put_fd;

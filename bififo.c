@@ -237,7 +237,6 @@ void free_evtchn(int port, int irq, void *dev_id)
 	}
 	else {
 	    EPRINTK("free event channel error: need irq or port!\n");
-	    dump_stack();
 	}
 }
 
@@ -370,6 +369,8 @@ void bf_destroy(co_located_vm *vm)
 #if ENABLE_MULTI_RING_READER && ENABLE_MULTI_RX_EVTCHN
 	int i;
 #endif
+
+	BUG_ON(!vm);
 
 	xf_destroy(vm->rx_ring);
 	xf_destroy(vm->tx_ring);
@@ -521,7 +522,7 @@ static int bind_evtchn(co_located_vm *vm, evtchn_port_t remote_rx_evtchn, evtchn
 		goto failed;
 	}
 	err = vmc_bind_interdomain_evtchn_and_irq_handler(vm->infor.domid, remote_tx_evtchn_tsc, 0,
-			&vm->tx_evtchn_ns, &vm->tx_irq_ns, xenvmc_tx_tsc_interrupt, "tx_tsc_interrupt", vm);
+			&vm->tx_evtchn_tsc, &vm->tx_irq_tsc, xenvmc_tx_tsc_interrupt, "tx_tsc_interrupt", vm);
 	if (err)
 	{
 		EPRINTK("vmc bind evtchn failed[tx_tsc_interrupt]!\n");
@@ -573,16 +574,27 @@ void bf_disconnect(co_located_vm *vm)
 	int i;
 #endif
 
+	BUG_ON(!vm);
+
 	xf_disconnect(vm->rx_ring);
 	xf_disconnect(vm->tx_ring);
 #if ENABLE_MULTI_RING_READER && ENABLE_MULTI_RX_EVTCHN
-	for (i = 0; i < RX_EVTCHN_NUM; i++)
+	for (i = 0; i < RX_EVTCHN_NUM; i++){
+	    BUG_ON(!vm->rx_evtchn[i]);
 		free_evtchn(vm->rx_evtchn[i], vm->rx_irq[i], vm);
+	}
 #else
 	free_evtchn(vm->rx_evtchn, vm->rx_irq, vm);
 #endif
-	free_evtchn(vm->tx_evtchn_ns, vm->tx_irq_ns, vm);
-	free_evtchn(vm->tx_evtchn_tsc, vm->tx_irq_tsc, vm);
+	if (vm->tx_evtchn_ns)
+	    free_evtchn(vm->tx_evtchn_ns, vm->tx_irq_ns, vm);
+	else
+	    EPRINTK("vm->tx_evtchn_ns not exist!\n");
+
+	if (vm->tx_evtchn_tsc)
+	    free_evtchn(vm->tx_evtchn_tsc, vm->tx_irq_tsc, vm);
+	else
+	    EPRINTK("vm->tx_evtchn_tsc not exist!\n");
 
 	return;
 }

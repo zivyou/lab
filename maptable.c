@@ -106,6 +106,7 @@ vmc_tcp_sock *insert_vmc_tcp_sock_to_vm(co_located_vm *vm, vmc_tcp_sock *vmc_soc
 	struct list_head *vmc_sock_list_head = NULL;
 	struct list_head *x;
 	int found = 0;
+	int vmc_count = 0;
 
 	write_lock_irq(&vm->lock);
 	vmc_sock_list_head = &(vm->vmc_tcp_sock[hash_port(vmc_sock->my_port, vmc_sock->peer_port)]);
@@ -117,6 +118,11 @@ vmc_tcp_sock *insert_vmc_tcp_sock_to_vm(co_located_vm *vm, vmc_tcp_sock *vmc_soc
 			found = 1;
 			break;
 		}
+		vmc_count++;
+	}
+	if (vmc_count > VMC_TCP_SOCK_HASH_SIZE){
+	    DPRINTK("too many vmc_tcp_sock!\n");
+	    BUG_ON(1);
 	}
 	if (!found)
 	{
