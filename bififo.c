@@ -143,12 +143,12 @@ irqreturn_t xenvmc_tx_ns_interrupt(int irq, void *dev_id)
 	nospace_response_times++;
 #endif
 
-	spin_lock_irqsave(&tx_ns_lock, flags);
+	//spin_lock_irqsave(&tx_ns_lock, flags);
 	if(test_bit(WAIT_FOR_SPACE, &vm->vm_flags)/* && (xf_free(vm->tx_ring) >= vm->need_space_size)*/)
 	{
 		wake_up_interruptible(&vm->wait_queue);
 	}
-	spin_unlock_irqrestore(&tx_ns_lock, flags);
+	//spin_unlock_irqrestore(&tx_ns_lock, flags);
 	return IRQ_HANDLED;
 }
 
@@ -161,12 +161,12 @@ irqreturn_t xenvmc_tx_tsc_interrupt(int irq, void *dev_id)
 #if DEBUG_EVTCHN_REPONSE
 	tcs_response_times++;
 #endif
-	spin_lock_irqsave(&tx_tsc_lock, flags);
+	//spin_lock_irqsave(&tx_tsc_lock, flags);
 	if (test_bit(WAIT_FOR_PEER, &vm->vm_flags)/* && (VM_TX_TCP_BUF_SIZE(vm) < (DEFAULT_MAX_TCP_BUF_SIZE - TCP_WIN_SIZE))*/)
 	{
 		wake_up_interruptible(&vm->wait_queue);
 	}
-	spin_unlock_irqrestore(&tx_tsc_lock, flags);
+	//spin_unlock_irqrestore(&tx_tsc_lock, flags);
 	return IRQ_HANDLED;
 }
 //int create_evtch(domid_t rdomid, int *port, int *irq, int *port_space, int *irq_space, int *port_peer, int *irq_peer, void *arg)

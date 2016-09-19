@@ -131,9 +131,10 @@ static inline bool check_conflict(xf_descriptor_t *des, uint32_t writer_end_pos)
 	int i;
 	for(i = 0; i < READER_NUM; i++)
 	{
+	    if (des->area_lock[i] == 0) continue;
 		/*smells like some bugs*/
-		if(des->area_lock[i] != -1 && after(writer_end_pos, des->area_lock[i]+RING_BUF_SIZE)){
-
+		//if(des->area_lock[i] != -1 && after(writer_end_pos, des->area_lock[i]+RING_BUF_SIZE)){
+	    if (des->area_lock[i] != -1 && after(writer_end_pos, des->area_lock[i])){
 			return true;
 		}
 	}

@@ -500,7 +500,7 @@ static int kthread_vmc_event_process(void *noused)
 				break;
 			case E_EVT_VMC_DOMU_DELETE:
 				vm = lookup_vm_by_domid(event->infor.domid);
-				BUG_ON(vm == NULL);
+				BUG_ON(vm == NULL); /* smells like some bugs */
 				broadcast_vm_delete_msg(&vm->infor);
 				remove_vm_from_hash_table(event->infor.domid);
 				break;

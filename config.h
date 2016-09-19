@@ -60,7 +60,7 @@
 //for multi-reader
 #define TEST_RX_IPI_EVTCHN				1
 
-#define ENABLE_MULTI_RING_READER		1
+#define ENABLE_MULTI_RING_READER		0
 #if ENABLE_MULTI_RING_READER
 	#define READER_NUM					2 //READER_NUM should not larger than NR_CPU
 	#define ENABLE_TWO_STAGE_RDWR		1

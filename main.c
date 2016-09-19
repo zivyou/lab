@@ -83,8 +83,8 @@
 #include "xenvmc_frontend.h"
 
 #define DEBUG_EVT				1
-#define DEBUG_SENDTO			1
-#define DEBUG_RECVFROM			1
+#define DEBUG_SENDTO			0
+#define DEBUG_RECVFROM			0
 #define DEBUG_CLOSE				0
 #define DEBUG_MSG				0
 #define DEBUG_MSG_CREATE		0
@@ -1426,7 +1426,7 @@ static int xmit_large_pkt(struct iovec *iov, XMIT_TYPE type, u_short src_port, u
 #endif
 
 #if DEBUG_SENDTO
-		DPRINTK("front:%x back:%x ring_size:%x index_mask:%x len:%d\n", des->front, des->back, des->ring_size, des->index_mask, iov->iov_len);
+		DPRINTK("front_w:%x back:%x ring_size:%x index_mask:%x len:%d\n", des->front_w, des->back, des->ring_size, des->index_mask, iov->iov_len);
 #endif
 #if ENABLE_TWO_STAGE_RDWR
 		BUG_ON(before(des->back, des->front_w));
@@ -1510,7 +1510,7 @@ static int xmit_large_pkt(struct iovec *iov, XMIT_TYPE type, u_short src_port, u
 #if ENABLE_TWO_STAGE_RDWR
 #if ENABLE_AREA_LOCK
 		rmb();
-		//printk(KERN_EMERG "des->back=%x, des->area_lock[0]=%x, des->area_lock[1]=%x\n", des->back, des->area_lock[0], des->area_lock[1]);
+		//printk(KERN_EMERG "des->back=%u, des->area_lock[0]=%u, des->area_lock[1]=%u\n", des->back, des->area_lock[0], des->area_lock[1]);
 		writer_area_lock(des, des->back);
 #endif
 #endif
@@ -1973,6 +1973,10 @@ static size_t do_fast_recv_from_vmc_sock(co_located_vm *vm, vmc_tcp_sock *vmc_so
 		}
 		continue;
 
+#if DEBUG_RECVFROM
+    DPRINTK("here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+#endif
+
 found_data:
 		buf_read = vmc_sock->head;
 		release_vmc_sock(vmc_sock);
@@ -2002,12 +2006,14 @@ found_data:
 		}
 		lock_vmc_sock(vmc_sock);
 	}while (len > 0);
+
 //	if (vm->rx_ring->descriptor->wait_for_peer/* && (VM_RX_TCP_BUF_SIZE(vm) < DEFAULT_MAX_TCP_BUF_SIZE - TCP_WIN_SIZE)*/)
 	if (vm->rx_ring->descriptor->wait_for_peer && (VM_RX_TCP_BUF_SIZE(vm) < DEFAULT_MAX_TCP_BUF_SIZE - TCP_RX_WIN_SIZE))
 	{
 //		notify_remote_via_irq(VM_TX_IRQ_TSC(vm));
 		tell_remote_to_wakeup_xmit_tsc(vm);
 	}
+
 	release_vmc_sock(vmc_sock);
 	return copied;
 }
@@ -2016,7 +2022,7 @@ asmlinkage long new_sys_recvfrom(int fd, void __user *buff, size_t len, unsigned
 		struct sockaddr __user *addr, int __user *addr_len)
 {
 	int err, fput_needed;
-	__be32 ip_addr;
+	u32 ip_addr=0;
 	u16 my_port = -1, peer_port = -1;
 	co_located_vm *vm;
 	vmc_tcp_sock *vmc_sock = NULL;
@@ -2032,6 +2038,7 @@ asmlinkage long new_sys_recvfrom(int fd, void __user *buff, size_t len, unsigned
 	get_sock_info(sock, &type, &ip_addr, &peer_port, &my_port);
 	if (type != SOCK_STREAM)
 		goto put_fd;
+	BUG_ON(!ip_addr);
 	vm = lookup_vm_by_ip(ip_addr);
 	if (peer_port == NET_PERF_TEST_PORT || my_port == NET_PERF_TEST_PORT)
 	{
@@ -2089,7 +2096,7 @@ asmlinkage long new_sys_recvfrom(int fd, void __user *buff, size_t len, unsigned
 		if (signal_pending(current))
 			return -EINTR;
 #if DEBUG_RECVFROM
-		DPRINTK("tcp_sk: rcv_nxt:%d copied_seq:%d peer_snd_nxt:%d", tp->rcv_nxt, tp->copied_seq, vmc_sock->peer_write_seq);
+		DPRINTK("tcp_sk: rcv_nxt:%u copied_seq:%u peer_snd_nxt:%u", tp->rcv_nxt, tp->copied_seq, vmc_sock->peer_write_seq);
 #endif
 		BUG_ON(before(vmc_sock->peer_write_seq, tp->copied_seq));
 		if (after(vmc_sock->peer_write_seq, tp->copied_seq))
@@ -2107,6 +2114,10 @@ asmlinkage long new_sys_recvfrom(int fd, void __user *buff, size_t len, unsigned
 	DPRINTK("recv from shared mem!\n");
 #endif
 	err = do_fast_recv_from_vmc_sock(vm, vmc_sock, buff, flags, len);
+
+#if DEBUG_RECVFROM
+	DPRINTK("read from vmc_tcp_sock!\n");
+#endif
 	if (err == 0 && vm->status == E_VMC_VM_STATUS_SUSPEND && vmc_sock->vmc_sock_status == E_VMC_TCP_CONN_CLOSE)
 	{
 #if DEBUG_RECVFROM
